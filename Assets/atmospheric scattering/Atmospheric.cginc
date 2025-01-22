@@ -1,4 +1,4 @@
-
+#include "VolumetricLighting.cginc"
 struct appdata
 {
 	float4 vertex : POSITION;
@@ -62,6 +62,9 @@ float3 GetWorldSpacePosition(float2 i_UV)
 	return positionWorldSpace;
 }
 
+bool outScreen(float2 uv) {
+	return uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1;
+}
 
 //-----------------------------------------------------------------------------------------
 // Helper Funcs : RaySphereIntersection
@@ -222,17 +225,22 @@ float4 IntegrateInscatteringRealtime(float3 rayStart, float3 rayDir, float rayLe
 		float3 p = rayStart + step * s;
 
 		GetAtmosphereDensityRealtime(p, planetCenter, lightDir, localDensity, densityCP);
-		densityPA += (localDensity + prevLocalDensity) * (stepSize / 2.0);
-		float3 localInscatterR, localInscatterM;
-		ComputeLocalInscattering(localDensity, densityCP, densityPA, localInscatterR, localInscatterM);
+		
+		float bInShadow = GetLightAttenuation(p);
+		if (bInShadow < 0.1 || (outScreen(p.xy)))
+		{
+			densityPA += (localDensity + prevLocalDensity) * (stepSize / 2.0);
+			float3 localInscatterR, localInscatterM;
+			ComputeLocalInscattering(localDensity, densityPA, densityCP, localInscatterR, localInscatterM);
 
-		scatterR += (localInscatterR + prevLocalInscatterR) * (stepSize / 2.0);
-		scatterM += (localInscatterM + prevLocalInscatterM) * (stepSize / 2.0);
+			scatterR += (localInscatterR + prevLocalInscatterR) * (stepSize / 2.0);
+			scatterM += (localInscatterM + prevLocalInscatterM) * (stepSize / 2.0);
 
-		prevLocalInscatterR = localInscatterR;
-		prevLocalInscatterM = localInscatterM;
-
-		prevLocalDensity = localDensity;
+			prevLocalInscatterR = localInscatterR;
+			prevLocalInscatterM = localInscatterM;
+		}
+		
+		prevLocalDensity = localDensity;		
 	}
 
 	float3 m = scatterM;
@@ -282,9 +290,8 @@ half4 ACESFull(half4 col)
 float4 frag(v2f i) : SV_Target
 {
 	float deviceZ = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i.uv);
-
+	
 	float3 positionWorldSpace = GetWorldSpacePosition(i.uv);
-
 	float3 rayStart = _WorldSpaceCameraPos;
 	float3 rayDir = positionWorldSpace - _WorldSpaceCameraPos;
 	float rayLength = length(rayDir);
@@ -323,6 +330,7 @@ float4 frag(v2f i) : SV_Target
 
 		FinalResult = sceneColor * extinction + inscattering;
 	}
+	
 	return FinalResult;
 
 	//return float4(positionWorldSpace, 1);

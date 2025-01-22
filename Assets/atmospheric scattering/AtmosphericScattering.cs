@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public class AtmosphericScattering : MonoBehaviour
 {
@@ -37,10 +38,14 @@ public class AtmosphericScattering : MonoBehaviour
     private readonly Vector4 DensityScale = new Vector4(7994.0f, 1200.0f, 0, 0);
     private readonly Vector4 RayleighSct = new Vector4(5.8f, 13.5f, 33.1f, 0.0f) * 0.000001f;
     private readonly Vector4 MieSct = new Vector4(2.0f, 2.0f, 2.0f, 0.0f) * 0.00001f;
+    
+    private CommandBuffer _cascadeShadowCommandBuffer;
+    
     // Start is called before the first frame update
     void Start()
     {
         InitPPMaterial();
+        EnableLightShafts();
     }
     void OnRenderImage(RenderTexture sourceTexture, RenderTexture destTexture)
     {
@@ -97,5 +102,25 @@ public class AtmosphericScattering : MonoBehaviour
 
         m_material.SetVector("_LightDir", new Vector4(Sun.transform.forward.x, Sun.transform.forward.y, Sun.transform.forward.z, 1.0f / (Sun.range * Sun.range)));
         m_material.SetVector("_LightColor", Sun.color * Sun.intensity);
+    }
+    public void EnableLightShafts()
+    {
+        if (_cascadeShadowCommandBuffer == null)
+            InitializeLightShafts();
+
+        Sun.RemoveCommandBuffer(LightEvent.AfterShadowMap, _cascadeShadowCommandBuffer);
+
+        Sun.AddCommandBuffer(LightEvent.AfterShadowMap, _cascadeShadowCommandBuffer);
+    }
+
+
+    public void InitializeLightShafts()
+    {
+        if (_cascadeShadowCommandBuffer == null)
+        {
+            _cascadeShadowCommandBuffer = new CommandBuffer();
+            _cascadeShadowCommandBuffer.name = "CascadeShadowCommandBuffer";
+            _cascadeShadowCommandBuffer.SetGlobalTexture("_CascadeShadowMapTexture", new RenderTargetIdentifier(BuiltinRenderTextureType.CurrentActive));
+        }
     }
 }
