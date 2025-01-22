@@ -47,6 +47,9 @@ float4x4 _InverseProjectionMatrix;
 sampler2D_float _CameraDepthTexture;
 float4 _CameraDepthTexture_ST;
 
+sampler2D _MainTex;
+float4 _MainTex_ST;
+
 float3 GetWorldSpacePosition(float2 i_UV)
 {
 	float depth = SAMPLE_DEPTH_TEXTURE(_CameraDepthTexture, i_UV);
@@ -305,16 +308,22 @@ float4 frag(v2f i) : SV_Target
 
 	float4 extinction;
 	_SunIntensity = 0;
-
+	float4 FinalResult = 0;
 	if (deviceZ < 0.000001)
 	{
 		float4 inscattering = IntegrateInscatteringRealtime(rayStart, rayDir, rayLength, planetCenter, 1, _LightDir, 16, extinction);
 		//tone mapping
 		inscattering = ACESFull(inscattering);
-		return inscattering;
+		FinalResult = inscattering;
 	}
 	else
-		return 0;
+	{
+		float4 inscattering = IntegrateInscatteringRealtime(rayStart, rayDir, rayLength, planetCenter, _DistanceScale, _LightDir, 16, extinction);
+		float4 sceneColor = tex2D(_MainTex, i.uv);
+
+		FinalResult = sceneColor * extinction + inscattering;
+	}
+	return FinalResult;
 
 	//return float4(positionWorldSpace, 1);
 }
