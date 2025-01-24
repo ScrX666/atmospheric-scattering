@@ -1,10 +1,9 @@
-Shader "Hidden/AtmosphereScattering"
+Shader "Hidden/urp_atomospheric"
 {
     Properties
     {
-        _MainTex("Texture", 2D) = "white" {}
+        _MainTex ("Texture", 2D) = "white" {}
     }
-
     SubShader
     {
         // No culling or depth
@@ -12,14 +11,13 @@ Shader "Hidden/AtmosphereScattering"
 
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-
-            #include "UnityCG.cginc"
-            #include "Atmospheric.cginc"
-
-            ENDCG
+            
+            #include "urp_atomosphericMain.hlsl"
+            
+            ENDHLSL
         }
     }
 }
