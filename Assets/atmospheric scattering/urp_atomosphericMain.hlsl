@@ -1,3 +1,4 @@
+#include "VolumetricLighting_urp.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
@@ -64,6 +65,25 @@ float3 GetWorldSpacePosition(float2 i_UV)
 
 bool outScreen(float2 uv) {
 	return uv.x < 0 || uv.x > 1 || uv.y < 0 || uv.y > 1;
+}
+
+//-----------------------------------------------------------------------------------------
+// Sun
+//-----------------------------------------------------------------------------------------
+float Sun(float cosAngle)
+{
+	float g = 0.98;
+	float g2 = g * g;
+
+	float sun = pow(1 - g, 2.0) / (4 * PI * pow(1.0 + g2 - 2.0*g*cosAngle, 1.5));
+	return sun * 0.003;// 5;
+}
+//-----------------------------------------------------------------------------------------
+// RenderSun
+//-----------------------------------------------------------------------------------------
+float3 RenderSun(in float3 scatterM, float cosAngle)
+{
+	return scatterM * Sun(cosAngle);
 }
 
 //-----------------------------------------------------------------------------------------
@@ -219,17 +239,20 @@ float4 IntegrateInscatteringRealtime(float3 rayStart, float3 rayDir, float rayLe
 	// P - current integration point
 	// A - camera position
 	// C - top of the atmosphere
+
 	[loop]
 	for (float s = 1.0; s < sampleCount; s += 1)
 	{
 		float3 p = rayStart + step * s;
 
 		GetAtmosphereDensityRealtime(p, planetCenter, lightDir, localDensity, densityCP);
-		
+
+		bool bInShadow = ShadowAtten(p) < 0.1;
+		if(!bInShadow)
 		{
 			densityPA += (localDensity + prevLocalDensity) * (stepSize / 2.0);
 			float3 localInscatterR, localInscatterM;
-			ComputeLocalInscattering(localDensity, densityPA, densityCP, localInscatterR, localInscatterM);
+			ComputeLocalInscattering(localDensity, densityCP, densityPA, localInscatterR, localInscatterM);
 
 			scatterR += (localInscatterR + prevLocalInscatterR) * (stepSize / 2.0);
 			scatterM += (localInscatterM + prevLocalInscatterM) * (stepSize / 2.0);
@@ -246,7 +269,7 @@ float4 IntegrateInscatteringRealtime(float3 rayStart, float3 rayDir, float rayLe
 	ApplyPhaseFunction(scatterR, scatterM, dot(rayDir, -lightDir.xyz));
 	//scatterR = 0;
 	float3 lightInscatter = (scatterR * _ScatteringR + scatterM * _ScatteringM) * _IncomingLight.xyz;
-	//lightInscatter += RenderSun(m, dot(rayDir, -lightDir.xyz)) * _SunIntensity;
+	lightInscatter += RenderSun(m, dot(rayDir, -lightDir.xyz)) * _SunIntensity;
 	float3 lightExtinction = exp(-(densityCP.x * _ExtinctionR + densityCP.y * _ExtinctionM));
 
 	extinction = float4(lightExtinction, 0);
@@ -313,11 +336,9 @@ float4 frag(v2f i) : SV_Target
 	
 	intersection = RaySphereIntersection(rayStart, rayDir, planetCenter, _PlanetRadius);							
 	if (intersection.x > 0)
-		rayLength = min(rayLength, intersection.x);
+		rayLength = min(rayLength, intersection.x);	
 	
-
 	float4 extinction;
-	_SunIntensity = 0;
 	float4 FinalResult = 0;
 	if (deviceZ < 0.000001)
 	{

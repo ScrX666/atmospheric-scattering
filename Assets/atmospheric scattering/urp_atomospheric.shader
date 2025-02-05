@@ -12,6 +12,9 @@ Shader "Hidden/urp_atomospheric"
         Pass
         {
             HLSLPROGRAM
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS_CASCADE
+            
             #pragma vertex vert
             #pragma fragment frag
             

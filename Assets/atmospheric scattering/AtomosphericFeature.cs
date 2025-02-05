@@ -46,7 +46,7 @@ public class AtomosphericFeature : ScriptableRendererFeature
         {
             _TemporaryColorTexture.Init("_TemporaryColorTexture");
         }
-
+        
         //这里执行渲染逻辑
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
@@ -110,6 +110,8 @@ public class AtomosphericFeature : ScriptableRendererFeature
         [Range(0.0f, 0.999f)]
         public float MieG = 0.76f;
         public float DistanceScale = 1;
+        [Range(0.01f, 50.0f)]
+        public float SunIntensity = 1;
 
 
         private Color _sunColor;
@@ -138,6 +140,7 @@ public class AtomosphericFeature : ScriptableRendererFeature
             _Material.SetColor("_IncomingLight", IncomingLight);
             _Material.SetFloat("_MieG", MieG);
             _Material.SetFloat("_DistanceScale", DistanceScale);
+            _Material.SetFloat("_SunIntensity", SunIntensity);
             _Material.SetColor("_SunColor", _sunColor);
 
             //---------------------------------------------------
@@ -145,6 +148,7 @@ public class AtomosphericFeature : ScriptableRendererFeature
             _Material.SetVector("_LightDir", new Vector4(Sun.transform.forward.x, Sun.transform.forward.y, Sun.transform.forward.z, 1.0f / (Sun.range * Sun.range)));
             _Material.SetVector("_LightColor", Sun.color * Sun.intensity);
         }
+        
 
         public Material GetMaterial()
         {
