@@ -1,4 +1,5 @@
-# 大气散射 AtmosphericScattering
+# 大气散射 AtmosphericScattering   
+WIKI: https://deepwiki.com/ScrX666/atmospheric-scattering   
 项目环境：Unity 2021.3.39f1  
 渲染管线：Built - In （后续可能会写一个URP版本（1.25已更新）  
 仅是个人用来学习项目，参考知乎作者[未名客](https://www.zhihu.com/people/wsqjny)  
